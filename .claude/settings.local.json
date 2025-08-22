@@ -6,7 +6,9 @@
       "Bash(rmdir:*)",
       "Bash(cp:*)",
       "Bash(rm:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(npm install)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

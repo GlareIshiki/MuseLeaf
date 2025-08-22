@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button.jsx'
 import CharacterCard from './components/CharacterCard'
-import { getCharactersWithMusic, getCharactersWithoutMusic } from './lib/mockData'
-import './App.css'
+import { getCharactersWithMusic, getCharactersWithoutMusic } from './utils/mockData'
+import './styles/App.css'
 
 function App() {
   const [activeTab, setActiveTab] = useState('music')
