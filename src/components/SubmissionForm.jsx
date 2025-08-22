@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox.jsx'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx'
 import { X, Upload, Music, Image as ImageIcon, AlertCircle } from 'lucide-react'
 import { characterService, assetService, musicService, tagService, supabase } from '../lib/supabase'
+import { useAuth } from '@/contexts/AuthProvider.jsx'
 
 const SubmissionForm = ({ onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
@@ -26,6 +27,7 @@ const SubmissionForm = ({ onClose, onSubmit }) => {
   const [loading, setLoading] = useState(false)
   const [imageFile, setImageFile] = useState(null)
   const [promptFile, setPromptFile] = useState(null)
+  const { user } = useAuth()
   const [error, setError] = useState('')
 
   const handleInputChange = (field, value) => {
@@ -74,9 +76,8 @@ const SubmissionForm = ({ onClose, onSubmit }) => {
         status: 'pending'
       }
 
-      // For demo purposes, we'll use a mock user_id
-      // In a real app, this would come from authentication
-      characterData.user_id = '00000000-0000-0000-0000-000000000000'
+      // user_id は Supabase 認証ユーザーを優先（RLSで必要）。未ログイン時のみモック値。
+      characterData.user_id = user?.id || '00000000-0000-0000-0000-000000000000'
 
       const character = await characterService.createCharacter(characterData)
 
