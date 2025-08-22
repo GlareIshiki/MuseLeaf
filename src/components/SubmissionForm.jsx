@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea.jsx'
 import { Checkbox } from '@/components/ui/checkbox.jsx'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx'
 import { X, Upload, Music, Image as ImageIcon, AlertCircle } from 'lucide-react'
-import { characterService, assetService, musicService, tagService } from '../lib/supabase'
+import { characterService, assetService, musicService, tagService, supabase } from '../lib/supabase'
 
 const SubmissionForm = ({ onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
@@ -24,6 +24,8 @@ const SubmissionForm = ({ onClose, onSubmit }) => {
     agreed_to_terms: false
   })
   const [loading, setLoading] = useState(false)
+  const [imageFile, setImageFile] = useState(null)
+  const [promptFile, setPromptFile] = useState(null)
   const [error, setError] = useState('')
 
   const handleInputChange = (field, value) => {
@@ -46,8 +48,8 @@ const SubmissionForm = ({ onClose, onSubmit }) => {
       setError('短い世界観説明は必須です')
       return
     }
-    if (!formData.image_url.trim()) {
-      setError('画像URLは必須です')
+    if (!formData.image_url.trim() && !imageFile) {
+      setError('画像URLまたは画像ファイルのどちらかが必要です')
       return
     }
     if (!formData.agreed_to_terms) {
@@ -78,13 +80,26 @@ const SubmissionForm = ({ onClose, onSubmit }) => {
 
       const character = await characterService.createCharacter(characterData)
 
+      // Prepare image URL (upload if file provided)
+      let imageUrl = formData.image_url.trim()
+      if (!imageUrl && imageFile && supabase) {
+        imageUrl = await assetService.uploadImage(imageFile, character.user_id, character.id)
+      }
+
+      // Optionally upload prompt file
+      let promptNote = ''
+      if (promptFile && supabase) {
+        const promptUrl = await assetService.uploadPromptFile(promptFile, character.user_id, character.id)
+        promptNote = `\n[Prompt file]: ${promptUrl}`
+      }
+
       // Create asset
       const assetData = {
         character_id: character.id,
         type: 'image',
-        original_url: formData.image_url.trim(),
-        thumbnail_url: formData.image_url.trim(), // In real app, would generate thumbnail
-        prompt_summary: formData.prompt_summary.trim() || null,
+        original_url: imageUrl,
+        thumbnail_url: imageUrl, // In real app, would generate thumbnail
+        prompt_summary: (formData.prompt_summary.trim() || '') + promptNote || null,
         downloadable: true
       }
 
@@ -204,25 +219,36 @@ const SubmissionForm = ({ onClose, onSubmit }) => {
             </div>
 
             {/* Image */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-gray-800 flex items-center space-x-2">
-                <ImageIcon className="w-4 h-4" />
-                <span>画像</span>
-              </h3>
-              
-              <div>
-                <Label htmlFor="image_url">画像URL *</Label>
-                <Input
-                  id="image_url"
-                  type="url"
-                  value={formData.image_url}
-                  onChange={(e) => handleInputChange('image_url', e.target.value)}
-                  placeholder="https://example.com/image.png"
-                />
-                <div className="text-xs text-gray-500 mt-1">
-                  PNG, JPG, WebP形式をサポート
-                </div>
-              </div>
+      <div className="space-y-4">
+        <h3 className="font-semibold text-gray-800 flex items-center space-x-2">
+          <ImageIcon className="w-4 h-4" />
+          <span>画像</span>
+        </h3>
+        
+        <div>
+          <Label htmlFor="image_url">画像URL *</Label>
+          <Input
+            id="image_url"
+            type="url"
+            value={formData.image_url}
+            onChange={(e) => handleInputChange('image_url', e.target.value)}
+            placeholder="https://example.com/image.png"
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            PNG, JPG, WebP形式をサポート。URLまたはファイルを選択できます。
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="image_file">画像ファイル（任意）</Label>
+          <Input
+            id="image_file"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+          />
+          <div className="text-xs text-gray-500 mt-1">アップロードにはログインが必要です（Supabase Storage）。</div>
+        </div>
 
               {/* Image Preview */}
               {formData.image_url && (
@@ -309,6 +335,17 @@ const SubmissionForm = ({ onClose, onSubmit }) => {
               </div>
             </div>
 
+            {/* Prompt file upload */}
+            <div className="space-y-2">
+              <Label htmlFor="prompt_file">プロンプトファイル（任意・.txt推奨）</Label>
+              <Input
+                id="prompt_file"
+                type="file"
+                accept=".txt,text/plain"
+                onChange={(e) => setPromptFile(e.target.files?.[0] || null)}
+              />
+            </div>
+
             {/* Submit Button */}
             <div className="flex justify-end space-x-2 pt-4">
               <Button type="button" variant="outline" onClick={onClose}>
@@ -326,4 +363,3 @@ const SubmissionForm = ({ onClose, onSubmit }) => {
 }
 
 export default SubmissionForm
-

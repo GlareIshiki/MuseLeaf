@@ -3,6 +3,10 @@ import { Button } from '@/components/ui/button.jsx'
 import CharacterCard from './components/CharacterCard'
 import { getCharactersWithMusic, getCharactersWithoutMusic } from './utils/mockData'
 import './styles/App.css'
+import AuthButtons from '@/components/AuthButtons.jsx'
+import SubmissionForm from '@/components/SubmissionForm.jsx'
+import AdminPanel from '@/components/AdminPanel.jsx'
+import { useAuth } from '@/contexts/AuthProvider.jsx'
 
 function App() {
   const [activeTab, setActiveTab] = useState('music')
@@ -12,6 +16,9 @@ function App() {
   const [currentAudio, setCurrentAudio] = useState(null)
   const [playingCharacterId, setPlayingCharacterId] = useState(null)
   const audioRef = useRef(null)
+  const { user } = useAuth()
+  const [showSubmit, setShowSubmit] = useState(false)
+  const [showAdmin, setShowAdmin] = useState(false)
 
   // Load characters data
   useEffect(() => {
@@ -164,12 +171,23 @@ function App() {
             </div>
             
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setShowSubmit(true)}>
                 投稿
               </Button>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (!user) {
+                    alert('管理パネルを開くにはログインが必要です')
+                    return
+                  }
+                  setShowAdmin(true)
+                }}
+              >
                 管理
               </Button>
+              <AuthButtons />
             </div>
           </div>
         </div>
@@ -221,9 +239,17 @@ function App() {
           : renderCharacterGrid(charactersWithoutMusic, false)
         }
       </main>
+      {/* Modals */}
+      <SubmissionForm
+        isOpen={showSubmit}
+        onClose={() => setShowSubmit(false)}
+        onSubmit={loadCharacters}
+      />
+      {showAdmin && (
+        <AdminPanel onClose={() => setShowAdmin(false)} onApprove={loadCharacters} />
+      )}
     </div>
   )
 }
 
 export default App
-
